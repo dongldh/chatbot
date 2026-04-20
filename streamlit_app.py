@@ -90,8 +90,13 @@ if prompt := st.chat_input("질문을 입력하세요..."):
         with client.messages.stream(
             model="claude-sonnet-4-6",
             max_tokens=1024,
-            system=get_system_prompt(),
+            system=[{
+                "type": "text",
+                "text": get_system_prompt(),
+                "cache_control": {"type": "ephemeral"},
+            }],
             messages=st.session_state.messages,
+            extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
         ) as stream:
             response_text = st.write_stream(
                 chunk for chunk in stream.text_stream
