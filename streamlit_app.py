@@ -19,7 +19,7 @@ MAX_HISTORY = 10
 TOP_K_CHUNKS = 4
 
 st.set_page_config(page_title="울산대학교 총무인사팀 챗봇", page_icon="💬")
-st.title("💬 FAQ 챗봇")
+st.title("💬 울산대학교 총무인사팀 챗봇")
 st.caption("궁금한 점을 물어보세요")
 
 
