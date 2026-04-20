@@ -1,37 +1,69 @@
 import os
+import re
 from pathlib import Path
 import streamlit as st
 import anthropic
 from dotenv import load_dotenv
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env", override=True)
 
 DOCS_DIR = BASE_DIR / "docs"
+MAX_HISTORY = 10
+TOP_K_CHUNKS = 4
 
 st.set_page_config(page_title="FAQ 챗봇", page_icon="💬")
 st.title("💬 FAQ 챗봇")
 st.caption("궁금한 점을 물어보세요")
 
 
-def load_docs() -> str:
-    parts = []
+def split_chunks(text: str, source: str) -> list[dict]:
+    """MD 파일을 헤더 기준으로 청크 분할."""
+    chunks = []
+    current = []
+    for line in text.splitlines():
+        if re.match(r"^#{1,3} ", line) and current:
+            chunks.append({"text": "\n".join(current), "source": source})
+            current = [line]
+        else:
+            current.append(line)
+    if current:
+        chunks.append({"text": "\n".join(current), "source": source})
+    return [c for c in chunks if len(c["text"].strip()) > 20]
+
+
+def load_chunks() -> list[dict]:
+    chunks = []
     for path in sorted(DOCS_DIR.glob("**/*.md")):
-        rel = path.relative_to(DOCS_DIR)
+        rel = str(path.relative_to(DOCS_DIR))
         content = path.read_text(encoding="utf-8").strip()
-        parts.append(f"=== {rel} ===\n{content}")
-    return "\n\n".join(parts)
+        chunks.extend(split_chunks(content, rel))
+    return chunks
 
 
-def get_system_prompt() -> str:
-    docs = load_docs()
-    return f"""당신은 회사 FAQ 챗봇입니다. 아래 문서를 바탕으로 질문에 답변하세요.
+def retrieve(query: str, chunks: list[dict], top_k: int = TOP_K_CHUNKS) -> str:
+    """TF-IDF로 질문과 가장 관련 높은 청크 반환."""
+    if not chunks:
+        return "관련 문서가 없습니다."
+    texts = [c["text"] for c in chunks]
+    vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 4))
+    tfidf = vectorizer.fit_transform(texts + [query])
+    scores = cosine_similarity(tfidf[-1], tfidf[:-1])[0]
+    top_idx = scores.argsort()[::-1][:top_k]
+    selected = [f"[{chunks[i]['source']}]\n{chunks[i]['text']}" for i in top_idx if scores[i] > 0]
+    return "\n\n---\n\n".join(selected) if selected else "관련 문서를 찾을 수 없습니다."
+
+
+def build_system_prompt(context: str) -> str:
+    return f"""당신은 회사 FAQ 챗봇입니다. 아래 관련 문서를 바탕으로 질문에 답변하세요.
 
 문서에 없는 내용은 "해당 내용은 문서에서 찾을 수 없습니다."라고 솔직하게 답하세요.
 답변은 한국어로, 친절하고 간결하게 해주세요.
 
 ---
-{docs}
+{context}
 ---"""
 
 
@@ -47,6 +79,7 @@ def get_client():
     return anthropic.Anthropic(api_key=api_key)
 
 
+# 사이드바 - 관리자 문서 관리
 with st.sidebar:
     st.header("📂 문서 관리")
     pw = st.text_input("관리자 비밀번호", type="password")
@@ -73,6 +106,7 @@ with st.sidebar:
     elif pw != "":
         st.error("비밀번호가 틀렸습니다")
 
+# 채팅
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -83,20 +117,22 @@ if prompt := st.chat_input("질문을 입력하세요..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.chat_message("user").write(prompt)
 
+    # 히스토리 최근 10개 유지
+    history = st.session_state.messages[-MAX_HISTORY:]
+
+    # RAG: 관련 청크 검색
+    chunks = load_chunks()
+    context = retrieve(prompt, chunks)
+    system_prompt = build_system_prompt(context)
+
     with st.chat_message("assistant"):
         client = get_client()
-        response_text = ""
 
         with client.messages.stream(
-            model="claude-sonnet-4-6",
+            model="claude-haiku-4-5-20251001",
             max_tokens=1024,
-            system=[{
-                "type": "text",
-                "text": get_system_prompt(),
-                "cache_control": {"type": "ephemeral"},
-            }],
-            messages=st.session_state.messages,
-            extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
+            system=system_prompt,
+            messages=history,
         ) as stream:
             response_text = st.write_stream(
                 chunk for chunk in stream.text_stream
