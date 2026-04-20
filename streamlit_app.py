@@ -1,9 +1,12 @@
 from __future__ import annotations
 import os
 import re
+from datetime import datetime
 from pathlib import Path
 import streamlit as st
 import anthropic
+import gspread
+from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -74,6 +77,33 @@ def build_system_prompt(context: str) -> str:
 ---"""
 
 
+@st.cache_resource(show_spinner=False)
+def get_sheet():
+    """Google Sheets 연결 (1회 캐싱)."""
+    creds_dict = dict(st.secrets.get("gcp_service_account", {}))
+    if not creds_dict:
+        return None
+    creds = Credentials.from_service_account_info(
+        creds_dict,
+        scopes=["https://www.googleapis.com/auth/spreadsheets"],
+    )
+    gc = gspread.authorize(creds)
+    sheet_url = st.secrets.get("SHEET_URL", "")
+    return gc.open_by_url(sheet_url).sheet1
+
+
+def log_to_sheets(question: str, answer: str):
+    """질문/답변을 Google Sheets에 기록."""
+    try:
+        sheet = get_sheet()
+        if sheet is None:
+            return
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        sheet.append_row([now, question, answer])
+    except Exception:
+        pass
+
+
 def get_client():
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
@@ -112,6 +142,17 @@ with st.sidebar:
                 f.unlink()
                 load_index.clear()
                 st.rerun()
+        st.divider()
+        if st.button("📊 질문 로그 보기"):
+            sheet = get_sheet()
+            if sheet:
+                rows = sheet.get_all_values()
+                if len(rows) > 1:
+                    import pandas as pd
+                    df = pd.DataFrame(rows[1:], columns=["시간", "질문", "답변"])
+                    st.dataframe(df, use_container_width=True)
+                else:
+                    st.info("아직 기록된 질문이 없습니다.")
     elif pw != "":
         st.error("비밀번호가 틀렸습니다")
 
@@ -147,3 +188,4 @@ if prompt := st.chat_input("질문을 입력하세요..."):
             )
 
     st.session_state.messages.append({"role": "assistant", "content": response_text})
+    log_to_sheets(prompt, response_text)

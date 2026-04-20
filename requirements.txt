@@ -2,3 +2,6 @@ streamlit>=1.35
 anthropic>=0.40
 python-dotenv>=1.0
 scikit-learn>=1.4
+gspread>=6.0
+google-auth>=2.0
+pandas>=2.0
