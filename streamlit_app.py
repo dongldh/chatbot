@@ -72,13 +72,17 @@ html, body, [class*="css"] {
 }
 
 /* 아바타 */
-[data-testid="chatAvatarIcon-assistant"] {
+[data-testid="chatAvatarIcon-assistant"] > * {
     background: #00A86B !important;
     border-radius: 12px !important;
 }
-[data-testid="chatAvatarIcon-user"] {
-    background: #D1F0E4 !important;
+[data-testid="chatAvatarIcon-user"] > * {
+    background: #4CAF82 !important;
     border-radius: 12px !important;
+}
+[data-testid="chatAvatarIcon-assistant"] svg,
+[data-testid="chatAvatarIcon-user"] svg {
+    fill: #ffffff !important;
 }
 
 /* 입력창 */
