@@ -35,23 +35,29 @@ def split_chunks(text: str, source: str) -> list[dict]:
     return [c for c in chunks if len(c["text"].strip()) > 20]
 
 
-def load_chunks() -> list[dict]:
+@st.cache_resource(show_spinner=False)
+def load_index():
+    """청크 로드 + TF-IDF 학습 (앱 시작 시 1회만 실행)."""
     chunks = []
     for path in sorted(DOCS_DIR.glob("**/*.md")):
         rel = str(path.relative_to(DOCS_DIR))
         content = path.read_text(encoding="utf-8").strip()
         chunks.extend(split_chunks(content, rel))
-    return chunks
-
-
-def retrieve(query: str, chunks: list[dict], top_k: int = TOP_K_CHUNKS) -> str:
-    """TF-IDF로 질문과 가장 관련 높은 청크 반환."""
     if not chunks:
-        return "관련 문서가 없습니다."
+        return [], None, None
     texts = [c["text"] for c in chunks]
     vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 4))
-    tfidf = vectorizer.fit_transform(texts + [query])
-    scores = cosine_similarity(tfidf[-1], tfidf[:-1])[0]
+    tfidf_matrix = vectorizer.fit_transform(texts)
+    return chunks, vectorizer, tfidf_matrix
+
+
+def retrieve(query: str, top_k: int = TOP_K_CHUNKS) -> str:
+    """TF-IDF로 질문과 가장 관련 높은 청크 반환."""
+    chunks, vectorizer, tfidf_matrix = load_index()
+    if not chunks:
+        return "관련 문서가 없습니다."
+    query_vec = vectorizer.transform([query])
+    scores = cosine_similarity(query_vec, tfidf_matrix)[0]
     top_idx = scores.argsort()[::-1][:top_k]
     selected = [f"[{chunks[i]['source']}]\n{chunks[i]['text']}" for i in top_idx if scores[i] > 0]
     return "\n\n---\n\n".join(selected) if selected else "관련 문서를 찾을 수 없습니다."
@@ -92,6 +98,7 @@ with st.sidebar:
             for f in uploaded:
                 save_path = DOCS_DIR / f.name
                 save_path.write_bytes(f.read())
+            load_index.clear()
             st.success(f"{len(uploaded)}개 파일 저장됨")
             st.rerun()
 
@@ -103,6 +110,7 @@ with st.sidebar:
             col1.text(f.name)
             if col2.button("삭제", key=f.name):
                 f.unlink()
+                load_index.clear()
                 st.rerun()
     elif pw != "":
         st.error("비밀번호가 틀렸습니다")
@@ -122,8 +130,7 @@ if prompt := st.chat_input("질문을 입력하세요..."):
     history = st.session_state.messages[-MAX_HISTORY:]
 
     # RAG: 관련 청크 검색
-    chunks = load_chunks()
-    context = retrieve(prompt, chunks)
+    context = retrieve(prompt)
     system_prompt = build_system_prompt(context)
 
     with st.chat_message("assistant"):
