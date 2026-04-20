@@ -22,43 +22,109 @@ st.set_page_config(page_title="울산대학교 총무인사팀 챗봇", page_ico
 
 st.markdown("""
 <style>
-.main-header {
-    background: linear-gradient(135deg, #1B5E20, #43A047);
-    padding: 24px 32px;
-    border-radius: 16px;
-    margin-bottom: 24px;
-    color: white;
-    text-align: center;
-}
-.main-header h1 { font-size: 26px; margin: 0; font-weight: 700; }
-.main-header p  { font-size: 14px; margin: 6px 0 0; opacity: 0.85; }
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
-    background: #E8F5E9;
-    border-radius: 16px;
-    border-left: 4px solid #43A047;
-    padding: 8px;
+html, body, [class*="css"] {
+    font-family: 'Pretendard', -apple-system, sans-serif !important;
 }
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
+
+/* 전체 배경 */
+.stApp { background: #F5F7F5; }
+
+/* 헤더 카드 */
+.toss-header {
     background: #ffffff;
-    border-radius: 16px;
-    border-left: 4px solid #2E7D32;
-    padding: 8px;
-    box-shadow: 0 1px 4px rgba(46,125,50,0.08);
+    border-radius: 24px;
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 16px rgba(0,168,107,0.08);
+    display: flex;
+    align-items: center;
+    gap: 16px;
 }
-[data-testid="stChatInput"] textarea {
-    border: 2px solid #A5D6A7 !important;
+.toss-header .icon {
+    width: 52px; height: 52px;
+    background: #E8F8F2;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; flex-shrink: 0;
+}
+.toss-header h1 {
+    font-size: 20px; font-weight: 700;
+    color: #191F28; margin: 0;
+}
+.toss-header p {
+    font-size: 13px; color: #8B95A1;
+    margin: 4px 0 0;
+}
+
+/* 채팅 메시지 */
+[data-testid="stChatMessage"] {
+    background: #ffffff !important;
+    border-radius: 20px !important;
+    padding: 16px !important;
+    margin: 6px 0 !important;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.05) !important;
+    border: none !important;
+}
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+    background: #E8F8F2 !important;
+}
+
+/* 아바타 */
+[data-testid="chatAvatarIcon-assistant"] {
+    background: #00A86B !important;
     border-radius: 12px !important;
 }
-[data-testid="stChatInput"] textarea:focus {
-    border-color: #2E7D32 !important;
+[data-testid="chatAvatarIcon-user"] {
+    background: #D1F0E4 !important;
+    border-radius: 12px !important;
 }
-[data-testid="stSidebar"] { background: #E8F5E9; }
+
+/* 입력창 */
+[data-testid="stChatInput"] {
+    background: #ffffff;
+    border-radius: 20px !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 1.5px solid #E4EDE8 !important;
+    padding: 4px 8px;
+}
+[data-testid="stChatInput"] textarea {
+    border: none !important;
+    background: transparent !important;
+    font-size: 15px !important;
+}
+[data-testid="stChatInput"] button {
+    background: #00A86B !important;
+    border-radius: 12px !important;
+}
+
+/* 사이드바 */
+[data-testid="stSidebar"] {
+    background: #ffffff !important;
+    border-right: 1px solid #EEF2EE;
+}
+[data-testid="stSidebar"] .stTextInput input {
+    border-radius: 12px !important;
+    border: 1.5px solid #E4EDE8 !important;
+}
+
+/* 버튼 */
+.stButton button {
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+}
+
+/* divider */
+hr { border-color: #EEF2EE !important; }
 </style>
 
-<div class="main-header">
-    <h1>🌿 울산대학교 총무인사팀 챗봇</h1>
-    <p>궁금한 점을 질문해 주세요. 빠르게 안내해 드리겠습니다.</p>
+<div class="toss-header">
+    <div class="icon">🌿</div>
+    <div>
+        <h1>울산대학교 총무인사팀 챗봇</h1>
+        <p>궁금한 점을 질문해 주세요. 빠르게 안내해 드리겠습니다.</p>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
