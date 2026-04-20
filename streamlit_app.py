@@ -18,9 +18,49 @@ DOCS_DIR = BASE_DIR / "docs"
 MAX_HISTORY = 10
 TOP_K_CHUNKS = 4
 
-st.set_page_config(page_title="울산대학교 총무인사팀 챗봇", page_icon="💬")
-st.title("💬 울산대학교 총무인사팀 챗봇")
-st.caption("궁금한 점을 물어보세요")
+st.set_page_config(page_title="울산대학교 총무인사팀 챗봇", page_icon="🌿", layout="centered")
+
+st.markdown("""
+<style>
+.main-header {
+    background: linear-gradient(135deg, #1B5E20, #43A047);
+    padding: 24px 32px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    color: white;
+    text-align: center;
+}
+.main-header h1 { font-size: 26px; margin: 0; font-weight: 700; }
+.main-header p  { font-size: 14px; margin: 6px 0 0; opacity: 0.85; }
+
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+    background: #E8F5E9;
+    border-radius: 16px;
+    border-left: 4px solid #43A047;
+    padding: 8px;
+}
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
+    background: #ffffff;
+    border-radius: 16px;
+    border-left: 4px solid #2E7D32;
+    padding: 8px;
+    box-shadow: 0 1px 4px rgba(46,125,50,0.08);
+}
+[data-testid="stChatInput"] textarea {
+    border: 2px solid #A5D6A7 !important;
+    border-radius: 12px !important;
+}
+[data-testid="stChatInput"] textarea:focus {
+    border-color: #2E7D32 !important;
+}
+[data-testid="stSidebar"] { background: #E8F5E9; }
+</style>
+
+<div class="main-header">
+    <h1>🌿 울산대학교 총무인사팀 챗봇</h1>
+    <p>궁금한 점을 질문해 주세요. 빠르게 안내해 드리겠습니다.</p>
+</div>
+""", unsafe_allow_html=True)
 
 
 def split_chunks(text: str, source: str) -> list[dict]:
