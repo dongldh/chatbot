@@ -1,6 +1,5 @@
 from __future__ import annotations
 import os
-import re
 from datetime import datetime
 from pathlib import Path
 import streamlit as st
@@ -8,15 +7,12 @@ import anthropic
 import gspread
 from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env", override=True)
 
 DOCS_DIR = BASE_DIR / "docs"
 MAX_HISTORY = 10
-TOP_K_CHUNKS = 8
 
 st.set_page_config(page_title="울산대학교 총무인사팀 챗봇", page_icon="🌿", layout="centered")
 
@@ -133,59 +129,20 @@ hr { border-color: #EEF2EE !important; }
 """, unsafe_allow_html=True)
 
 
-def split_chunks(text: str, source: str) -> list[dict]:
-    """MD 파일을 헤더 기준으로 청크 분할. 부모 헤더 컨텍스트를 자식 청크에 포함."""
-    chunks = []
-    current = []
-    parent_header = ""
-
-    for line in text.splitlines():
-        if re.match(r"^## ", line):
-            if current:
-                chunks.append({"text": "\n".join(current), "source": source})
-            parent_header = line
-            current = [line]
-        elif re.match(r"^### ", line) and current:
-            chunks.append({"text": "\n".join(current), "source": source})
-            current = [parent_header, line] if parent_header else [line]
-        else:
-            current.append(line)
-
-    if current:
-        chunks.append({"text": "\n".join(current), "source": source})
-    return [c for c in chunks if len(c["text"].strip()) > 20]
-
-
 @st.cache_resource(show_spinner=False)
-def load_index():
-    """청크 로드 + TF-IDF 학습 (앱 시작 시 1회만 실행)."""
-    chunks = []
+def load_docs() -> str:
+    """전체 MD 파일을 하나의 문자열로 합침 (캐싱)."""
+    parts = []
     for path in sorted(DOCS_DIR.glob("**/*.md")):
-        rel = str(path.relative_to(DOCS_DIR))
+        rel = path.relative_to(DOCS_DIR)
         content = path.read_text(encoding="utf-8").strip()
-        chunks.extend(split_chunks(content, rel))
-    if not chunks:
-        return [], None, None
-    texts = [c["text"] for c in chunks]
-    vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 4))
-    tfidf_matrix = vectorizer.fit_transform(texts)
-    return chunks, vectorizer, tfidf_matrix
+        parts.append(f"=== {rel} ===\n{content}")
+    return "\n\n".join(parts)
 
 
-def retrieve(query: str, top_k: int = TOP_K_CHUNKS) -> str:
-    """TF-IDF로 질문과 가장 관련 높은 청크 반환."""
-    chunks, vectorizer, tfidf_matrix = load_index()
-    if not chunks:
-        return "관련 문서가 없습니다."
-    query_vec = vectorizer.transform([query])
-    scores = cosine_similarity(query_vec, tfidf_matrix)[0]
-    top_idx = scores.argsort()[::-1][:top_k]
-    selected = [f"[{chunks[i]['source']}]\n{chunks[i]['text']}" for i in top_idx if scores[i] > 0]
-    return "\n\n---\n\n".join(selected) if selected else "관련 문서를 찾을 수 없습니다."
-
-
-def build_system_prompt(context: str) -> str:
-    return f"""당신은 회사 총무인사팀의 FAQ 챗봇입니다. 아래 관련 문서를 바탕으로 질문에 답변하세요.
+def build_system_prompt() -> str:
+    docs = load_docs()
+    return f"""당신은 울산대학교 총무인사팀의 FAQ 챗봇입니다. 아래 문서를 바탕으로 질문에 답변하세요.
 
 [답변 규칙]
 1. 친절하지만 간결하게 답변하세요. 불필요한 설명은 생략합니다.
@@ -195,7 +152,7 @@ def build_system_prompt(context: str) -> str:
 5. 답변에 #, ##, ### 등 마크다운 헤더를 절대 사용하지 마세요. 제목이나 강조가 필요하면 **굵은 글씨**만 사용하세요.
 
 ---
-{context}
+{docs}
 ---"""
 
 
@@ -250,7 +207,7 @@ with st.sidebar:
             for f in uploaded:
                 save_path = DOCS_DIR / f.name
                 save_path.write_bytes(f.read())
-            load_index.clear()
+            load_docs.clear()
             st.success(f"{len(uploaded)}개 파일 저장됨")
             st.rerun()
 
@@ -262,7 +219,7 @@ with st.sidebar:
             col1.text(f.name)
             if col2.button("삭제", key=f.name):
                 f.unlink()
-                load_index.clear()
+                load_docs.clear()
                 st.rerun()
         st.divider()
         if st.button("📊 질문 로그 보기"):
@@ -289,12 +246,7 @@ if prompt := st.chat_input("질문을 입력하세요..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.chat_message("user").write(prompt)
 
-    # 히스토리 최근 10개 유지
     history = st.session_state.messages[-MAX_HISTORY:]
-
-    # RAG: 관련 청크 검색
-    context = retrieve(prompt)
-    system_prompt = build_system_prompt(context)
 
     with st.chat_message("assistant"):
         client = get_client()
@@ -302,8 +254,13 @@ if prompt := st.chat_input("질문을 입력하세요..."):
         with client.messages.stream(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
-            system=system_prompt,
+            system=[{
+                "type": "text",
+                "text": build_system_prompt(),
+                "cache_control": {"type": "ephemeral"},
+            }],
             messages=history,
+            extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
         ) as stream:
             response_text = st.write_stream(
                 chunk for chunk in stream.text_stream
