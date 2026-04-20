@@ -117,6 +117,16 @@ html, body, [class*="css"] {
 
 /* divider */
 hr { border-color: #EEF2EE !important; }
+
+/* 채팅 내 헤더 크기 일반 텍스트로 고정 */
+[data-testid="stChatMessage"] h1,
+[data-testid="stChatMessage"] h2,
+[data-testid="stChatMessage"] h3,
+[data-testid="stChatMessage"] h4 {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    margin: 4px 0 !important;
+}
 </style>
 
 <div class="toss-header">
