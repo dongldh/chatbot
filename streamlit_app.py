@@ -16,7 +16,7 @@ load_dotenv(BASE_DIR / ".env", override=True)
 
 DOCS_DIR = BASE_DIR / "docs"
 MAX_HISTORY = 10
-TOP_K_CHUNKS = 4
+TOP_K_CHUNKS = 8
 
 st.set_page_config(page_title="울산대학교 총무인사팀 챗봇", page_icon="🌿", layout="centered")
 
@@ -134,15 +134,23 @@ hr { border-color: #EEF2EE !important; }
 
 
 def split_chunks(text: str, source: str) -> list[dict]:
-    """MD 파일을 헤더 기준으로 청크 분할."""
+    """MD 파일을 헤더 기준으로 청크 분할. 부모 헤더 컨텍스트를 자식 청크에 포함."""
     chunks = []
     current = []
+    parent_header = ""
+
     for line in text.splitlines():
-        if re.match(r"^#{1,3} ", line) and current:
-            chunks.append({"text": "\n".join(current), "source": source})
+        if re.match(r"^## ", line):
+            if current:
+                chunks.append({"text": "\n".join(current), "source": source})
+            parent_header = line
             current = [line]
+        elif re.match(r"^### ", line) and current:
+            chunks.append({"text": "\n".join(current), "source": source})
+            current = [parent_header, line] if parent_header else [line]
         else:
             current.append(line)
+
     if current:
         chunks.append({"text": "\n".join(current), "source": source})
     return [c for c in chunks if len(c["text"].strip()) > 20]
