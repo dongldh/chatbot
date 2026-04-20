@@ -49,23 +49,29 @@ def get_client():
 
 with st.sidebar:
     st.header("📂 문서 관리")
-    uploaded = st.file_uploader("MD 파일 업로드", type=["md"], accept_multiple_files=True)
-    if uploaded:
-        for f in uploaded:
-            save_path = DOCS_DIR / f.name
-            save_path.write_bytes(f.read())
-        st.success(f"{len(uploaded)}개 파일 저장됨")
-        st.rerun()
+    pw = st.text_input("관리자 비밀번호", type="password")
+    admin_pw = st.secrets.get("ADMIN_PASSWORD", "")
 
-    st.divider()
-    files = sorted(DOCS_DIR.glob("**/*.md"))
-    st.caption(f"현재 문서 {len(files)}개")
-    for f in files:
-        col1, col2 = st.columns([4, 1])
-        col1.text(f.name)
-        if col2.button("삭제", key=f.name):
-            f.unlink()
+    if pw == admin_pw and pw != "":
+        uploaded = st.file_uploader("MD 파일 업로드", type=["md"], accept_multiple_files=True)
+        if uploaded:
+            for f in uploaded:
+                save_path = DOCS_DIR / f.name
+                save_path.write_bytes(f.read())
+            st.success(f"{len(uploaded)}개 파일 저장됨")
             st.rerun()
+
+        st.divider()
+        files = sorted(DOCS_DIR.glob("**/*.md"))
+        st.caption(f"현재 문서 {len(files)}개")
+        for f in files:
+            col1, col2 = st.columns([4, 1])
+            col1.text(f.name)
+            if col2.button("삭제", key=f.name):
+                f.unlink()
+                st.rerun()
+    elif pw != "":
+        st.error("비밀번호가 틀렸습니다")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
