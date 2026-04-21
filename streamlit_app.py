@@ -133,7 +133,7 @@ hr { border-color: #EEF2EE !important; }
     <div class="icon">🌿</div>
     <div>
         <h1>울산대학교 총무인사팀 챗봇</h1>
-        <p>궁금한 점을 질문해 주세요. 빠르게 안내해 드리겠습니다.</p>
+        <p>궁금한 점을 질문해 주세요. 최대한 아는만큼 안내해 드리겠습니다. :)</p>
     </div>
 </div>
 """, unsafe_allow_html=True)
