@@ -14,7 +14,7 @@ load_dotenv(BASE_DIR / ".env", override=True)
 DOCS_DIR = BASE_DIR / "docs"
 MAX_HISTORY = 10
 
-st.set_page_config(page_title="울산대학교 총무인사팀 챗봇", page_icon="🌿", layout="centered")
+st.set_page_config(page_title="울산대학교 총무팀 챗봇", page_icon="🌿", layout="centered")
 
 st.markdown("""
 <style>
