@@ -151,16 +151,11 @@ SYSTEM_INSTRUCTIONS = """당신은 울산대학교 총무인사팀의 FAQ 챗봇
 5. 답변에 #, ##, ### 등 마크다운 헤더를 절대 사용하지 마세요. 제목이나 강조가 필요하면 **굵은 글씨**만 사용하세요."""
 
 
-def _wiki_mtime_key() -> str:
-    """wiki/ 파일들의 최신 수정 시각을 문자열로 반환 (캐시 키용)."""
-    if not WIKI_DIR.exists():
-        return "none"
-    mtimes = [p.stat().st_mtime for p in WIKI_DIR.glob("*.md")]
-    return str(max(mtimes)) if mtimes else "none"
+_wiki_version = 0
 
 
-@st.cache_data(show_spinner="위키 로딩 중...")
-def load_wiki(mtime_key: str = "") -> str:  # noqa: ARG001
+@st.cache_resource(show_spinner="위키 로딩 중...")
+def load_wiki(version: int = 0) -> str:  # noqa: ARG001
     """wiki/ 폴더의 모든 MD 파일을 읽어 하나의 문자열로 반환."""
     if not WIKI_DIR.exists() or not any(WIKI_DIR.glob("*.md")):
         return ""
@@ -176,8 +171,9 @@ def load_wiki(mtime_key: str = "") -> str:  # noqa: ARG001
 
 
 def _reload_wiki():
-    """위키 캐시를 초기화하여 다음 요청 시 재로드."""
-    load_wiki.clear()
+    """위키 버전을 올려 다음 요청 시 캐시 무효화."""
+    global _wiki_version
+    _wiki_version += 1
 
 
 @st.cache_resource(show_spinner=False)
@@ -286,7 +282,7 @@ if prompt := st.chat_input("질문을 입력하세요..."):
 
     with st.chat_message("assistant"):
         client = get_client()
-        wiki_content = load_wiki(_wiki_mtime_key())
+        wiki_content = load_wiki(_wiki_version)
 
         if not wiki_content:
             st.warning("위키가 아직 없습니다. 관리자 패널에서 위키 재구축을 실행해 주세요.")
