@@ -27,7 +27,7 @@ def _plan_wiki(client: anthropic.Anthropic, docs_dir: Path) -> list[dict]:
         doc_previews.append(f"- {stem}\n  (미리보기: {preview})")
 
     response = client.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-haiku-4-5-20251001",
         max_tokens=4096,
         messages=[
             {
@@ -64,7 +64,7 @@ def _plan_wiki(client: anthropic.Anthropic, docs_dir: Path) -> list[dict]:
     except json.JSONDecodeError:
         # JSON이 잘린 경우 재시도
         fix_response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-haiku-4-5-20251001",
             max_tokens=2048,
             messages=[
                 {"role": "user", "content": "다음 JSON을 올바르게 수정하여 완성된 JSON 배열만 반환하세요:\n" + raw},
@@ -89,7 +89,7 @@ def _read_docs_by_stems(docs_dir: Path, stems: list[str]) -> str:
 def _build_page(client: anthropic.Anthropic, title: str, doc_content: str, instruction: str) -> str:
     """Claude로 단일 위키 페이지를 생성."""
     response = client.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-haiku-4-5-20251001",
         max_tokens=4096,
         messages=[
             {
