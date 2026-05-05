@@ -300,6 +300,7 @@ if prompt := st.chat_input("질문을 입력하세요..."):
                 },
             ],
             messages=history,
+            extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
         ) as stream:
             response_text = st.write_stream(
                 chunk for chunk in stream.text_stream
