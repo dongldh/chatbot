@@ -28,7 +28,7 @@ def _plan_wiki(client: anthropic.Anthropic, docs_dir: Path) -> list[dict]:
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=2048,
+        max_tokens=4096,
         messages=[
             {
                 "role": "user",
@@ -40,14 +40,14 @@ def _plan_wiki(client: anthropic.Anthropic, docs_dir: Path) -> list[dict]:
                     "- 독립적인 주제는 별도 페이지\n"
                     "- filename은 한글_구분.md 형식 (예: 채용_심사.md)\n"
                     "- sources에는 원본 파일의 stem(확장자 제외)을 정확히 입력\n"
-                    "- instruction은 해당 페이지 작성 시 편집자에게 줄 구체적 지침\n\n"
+                    "- instruction은 간결하게 한 문장으로 작성\n\n"
                     "JSON 배열만 반환하세요 (다른 설명 없이):\n"
                     '[\n'
                     '  {\n'
                     '    "filename": "페이지명.md",\n'
                     '    "title": "페이지 제목",\n'
                     '    "sources": ["원본파일stem1", "원본파일stem2"],\n'
-                    '    "instruction": "이 페이지 작성 지침"\n'
+                    '    "instruction": "작성 지침 한 문장"\n'
                     '  }\n'
                     ']\n\n'
                     f"문서 목록:\n" + "\n".join(doc_previews)
@@ -58,7 +58,21 @@ def _plan_wiki(client: anthropic.Anthropic, docs_dir: Path) -> list[dict]:
 
     text = response.content[0].text.strip()
     match = re.search(r"\[[\s\S]*\]", text)
-    return json.loads(match.group() if match else text)
+    raw = match.group() if match else text
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        # JSON이 잘린 경우 재시도
+        fix_response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2048,
+            messages=[
+                {"role": "user", "content": "다음 JSON을 올바르게 수정하여 완성된 JSON 배열만 반환하세요:\n" + raw},
+            ],
+        )
+        fixed = fix_response.content[0].text.strip()
+        match2 = re.search(r"\[[\s\S]*\]", fixed)
+        return json.loads(match2.group() if match2 else fixed)
 
 
 def _read_docs_by_stems(docs_dir: Path, stems: list[str]) -> str:
