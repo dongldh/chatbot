@@ -287,20 +287,8 @@ if prompt := st.chat_input("질문을 입력하세요..."):
         with client.messages.stream(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
-            system=[
-                {
-                    "type": "text",
-                    "text": SYSTEM_INSTRUCTIONS,
-                    "cache_control": {"type": "ephemeral"},
-                },
-                {
-                    "type": "text",
-                    "text": f"[지식 베이스]\n{wiki_content}",
-                    "cache_control": {"type": "ephemeral"},
-                },
-            ],
+            system=f"{SYSTEM_INSTRUCTIONS}\n\n[지식 베이스]\n{wiki_content}",
             messages=history,
-            extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
         ) as stream:
             response_text = st.write_stream(
                 chunk for chunk in stream.text_stream
