@@ -19,12 +19,17 @@ def _nfc(s: str) -> str:
 
 def _plan_wiki(client: anthropic.Anthropic, docs_dir: Path) -> list[dict]:
     """docs 파일 목록을 Claude에게 분석시켜 위키 페이지 구조를 제안받는다."""
-    doc_previews: list[str] = []
+    all_stems: list[tuple[str, str]] = []
     for path in sorted(docs_dir.glob("*.md")):
         stem = _nfc(path.stem)
         lines = path.read_text(encoding="utf-8").strip().splitlines()
-        preview = " ".join(lines[:3])[:150]
-        doc_previews.append(f"- {stem}\n  (미리보기: {preview})")
+        preview = " ".join(lines[:2])[:80]
+        all_stems.append((stem, preview))
+
+    stem_list = "\n".join(
+        f'{i+1}. "{stem}" — {preview}'
+        for i, (stem, preview) in enumerate(all_stems)
+    )
 
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
@@ -33,24 +38,15 @@ def _plan_wiki(client: anthropic.Anthropic, docs_dir: Path) -> list[dict]:
             {
                 "role": "user",
                 "content": (
-                    "울산대학교 총무인사팀 업무 매뉴얼 문서들입니다.\n"
-                    "관련 문서를 통합하고 주제별 위키 페이지 구조를 설계하세요.\n\n"
+                    "아래는 docs 폴더의 파일 목록입니다. 번호와 큰따옴표 안의 파일명을 확인하세요.\n\n"
                     "[규칙]\n"
-                    "- 밀접하게 관련된 문서는 하나의 위키 페이지로 통합\n"
-                    "- 독립적인 주제는 별도 페이지\n"
-                    "- filename은 한글_구분.md 형식 (예: 채용_심사.md)\n"
-                    "- sources에는 원본 파일의 stem(확장자 제외)을 정확히 입력\n"
-                    "- instruction은 간결하게 한 문장으로 작성\n\n"
-                    "JSON 배열만 반환하세요 (다른 설명 없이):\n"
-                    '[\n'
-                    '  {\n'
-                    '    "filename": "페이지명.md",\n'
-                    '    "title": "페이지 제목",\n'
-                    '    "sources": ["원본파일stem1", "원본파일stem2"],\n'
-                    '    "instruction": "작성 지침 한 문장"\n'
-                    '  }\n'
-                    ']\n\n'
-                    f"문서 목록:\n" + "\n".join(doc_previews)
+                    "- 관련 파일은 하나의 위키 페이지로 통합, 독립 주제는 별도 페이지\n"
+                    "- filename은 한글_구분.md 형식\n"
+                    "- sources 배열에는 큰따옴표 안의 파일명을 글자 하나도 틀리지 않고 정확히 복사\n"
+                    "- instruction은 한 문장\n\n"
+                    "JSON 배열만 반환 (설명 없이):\n"
+                    '[{"filename":"...","title":"...","sources":["파일명 정확히"],"instruction":"..."}]\n\n'
+                    f"파일 목록:\n{stem_list}"
                 ),
             }
         ],
@@ -76,13 +72,19 @@ def _plan_wiki(client: anthropic.Anthropic, docs_dir: Path) -> list[dict]:
 
 
 def _read_docs_by_stems(docs_dir: Path, stems: list[str]) -> str:
-    """stems 목록에 해당하는 docs 파일을 읽어 하나의 문자열로 반환."""
-    target = {_nfc(s) for s in stems}
+    """stems 목록에 해당하는 docs 파일을 읽어 하나의 문자열로 반환.
+    정확한 일치 우선, 없으면 파일명이 stem으로 시작하는 것도 포함."""
+    targets_nfc = [_nfc(s) for s in stems]
     parts: list[str] = []
     for path in sorted(docs_dir.glob("*.md")):
-        if _nfc(path.stem) in target:
+        stem_nfc = _nfc(path.stem)
+        matched = any(
+            stem_nfc == t or stem_nfc.startswith(t) or t in stem_nfc
+            for t in targets_nfc
+        )
+        if matched:
             content = path.read_text(encoding="utf-8").strip()
-            parts.append(f"=== {_nfc(path.stem)} ===\n{content}")
+            parts.append(f"=== {stem_nfc} ===\n{content}")
     return "\n\n".join(parts)
 
 
