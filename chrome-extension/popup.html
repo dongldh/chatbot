@@ -7,81 +7,60 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
-    width: 300px;
-    padding: 18px;
+    width: 280px;
     background: #F5F7F5;
     color: #191F28;
   }
+
   .header {
+    background: #00A86B;
+    padding: 18px 18px 16px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 16px;
+    gap: 12px;
   }
   .icon {
-    width: 38px; height: 38px;
-    background: #00A86B;
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.2);
     border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0;
+    font-size: 20px; flex-shrink: 0;
   }
-  h3 { font-size: 15px; font-weight: 700; }
-  .sub { font-size: 11px; color: #8B95A1; margin-top: 2px; }
+  .header h3 { font-size: 15px; font-weight: 700; color: #fff; }
+  .header p  { font-size: 11px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+
+  .body { padding: 16px; }
 
   .card {
     background: #fff;
     border-radius: 14px;
     padding: 14px;
     box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-    margin-bottom: 10px;
   }
-  .card-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: #8B95A1;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 10px;
-  }
-  .phase-badge {
-    display: inline-block;
-    font-size: 10px;
-    padding: 1px 7px;
-    border-radius: 20px;
-    margin-left: 6px;
-    font-weight: 600;
-    vertical-align: middle;
-  }
-  .phase1 { background: #E8F8F2; color: #00A86B; }
-  .phase2 { background: #FFF3E0; color: #E65100; }
 
-  .field { margin-bottom: 10px; }
-  .field:last-child { margin-bottom: 0; }
-  label { font-size: 12px; color: #8B95A1; display: block; margin-bottom: 4px; }
+  label { font-size: 12px; color: #8B95A1; display: block; margin-bottom: 6px; font-weight: 500; }
+
   input {
     width: 100%;
-    padding: 8px 11px;
+    padding: 9px 12px;
     border: 1.5px solid #E4EDE8;
     border-radius: 10px;
     font-size: 13px;
     outline: none;
-    background: #F5F7F5;
     color: #191F28;
+    background: #F5F7F5;
   }
   input:focus { border-color: #00A86B; background: #fff; }
-  input::placeholder { color: #BCC5C0; }
-
-  .hint { font-size: 11px; color: #8B95A1; margin-top: 4px; line-height: 1.5; }
 
   button {
     width: 100%;
     margin-top: 12px;
-    padding: 10px;
+    padding: 11px;
     background: #00A86B;
     color: #fff;
     border: none;
     border-radius: 10px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
   }
@@ -89,22 +68,20 @@
 
   .status {
     font-size: 12px;
-    margin-top: 8px;
+    margin-top: 10px;
     text-align: center;
-    min-height: 16px;
+    min-height: 18px;
   }
   .ok  { color: #00A86B; }
   .err { color: #E53E3E; }
 
-  .mode-indicator {
+  .footer {
+    padding: 10px 16px 14px;
     font-size: 11px;
+    color: #8B95A1;
     text-align: center;
-    padding: 6px 10px;
-    border-radius: 8px;
-    margin-bottom: 10px;
+    line-height: 1.6;
   }
-  .mode-direct { background: #E8F8F2; color: #2E7D52; }
-  .mode-server { background: #FFF3E0; color: #BF6000; }
 </style>
 </head>
 <body>
@@ -112,44 +89,24 @@
 <div class="header">
   <div class="icon">🌿</div>
   <div>
-    <h3>업무 도우미 설정</h3>
-    <div class="sub">울산대학교 총무인사팀</div>
+    <h3>업무 도우미</h3>
+    <p>울산대학교 총무인사팀</p>
   </div>
 </div>
 
-<div class="mode-indicator" id="modeIndicator">현재 모드 확인 중...</div>
-
-<!-- Phase 1: 직접 연결 -->
-<div class="card">
-  <div class="card-title">API 설정 <span class="phase-badge phase1">Phase 1</span></div>
-  <div class="field">
+<div class="body">
+  <div class="card">
     <label>Anthropic API 키</label>
     <input type="password" id="apiKey" placeholder="sk-ant-...">
+    <button id="save">저장</button>
+    <p class="status" id="status"></p>
   </div>
 </div>
 
-<!-- 개인 정보 -->
-<div class="card">
-  <div class="card-title">내 정보</div>
-  <div class="field">
-    <label>사번 (선택)</label>
-    <input type="text" id="employeeId" placeholder="예: 202401001">
-    <div class="hint">입력하면 부서·예산 등 개인화된 답변을 받을 수 있습니다</div>
-  </div>
+<div class="footer">
+  API 키는 이 기기에만 저장됩니다.<br>
+  외부로 전송되지 않습니다.
 </div>
-
-<!-- Phase 2: 내부 서버 -->
-<div class="card">
-  <div class="card-title">내부 서버 <span class="phase-badge phase2">Phase 2 · DB 연동용</span></div>
-  <div class="field">
-    <label>서버 URL (선택)</label>
-    <input type="text" id="serverUrl" placeholder="http://192.168.x.x:8000">
-    <div class="hint">입력 시 내부 서버를 통해 DB 개인화 정보가 연동됩니다.<br>비워두면 Anthropic API를 직접 사용합니다.</div>
-  </div>
-</div>
-
-<button id="save">저장</button>
-<p class="status" id="status"></p>
 
 <script src="popup.js"></script>
 </body>

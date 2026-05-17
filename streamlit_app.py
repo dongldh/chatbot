@@ -1,5 +1,6 @@
 from __future__ import annotations
 import os
+import re
 from datetime import datetime
 import pytz
 from pathlib import Path
@@ -141,14 +142,15 @@ hr { border-color: #EEF2EE !important; }
 """, unsafe_allow_html=True)
 
 
-SYSTEM_INSTRUCTIONS = """당신은 울산대학교 총무인사팀의 FAQ 챗봇입니다. 아래 [관련 문서]를 바탕으로 질문에 답변하세요.
+SYSTEM_INSTRUCTIONS = """당신은 울산대학교 총무인사팀의 FAQ 챗봇입니다. 아래 [지식 베이스]를 바탕으로 질문에 답변하세요.
 
 [답변 규칙]
 1. 친절하지만 간결하게 답변하세요. 불필요한 설명은 생략합니다.
 2. 문서에 없는 내용은 "죄송합니다, 해당 내용은 제가 알고 있는 범위를 벗어납니다."라고 솔직하게 말하세요.
 3. 모든 답변 마지막에 짧은 인사로 마무리하세요. (예: "도움이 되셨길 바랍니다 😊", "좋은 하루 되세요!", "언제든지 질문해 주세요!")
 4. 문서에 없거나 추가 확인이 필요한 경우, "자세한 사항은 총무인사팀으로 Teams 메시지를 보내주시면 안내해 드리겠습니다."라고 안내하세요.
-5. 답변에 #, ##, ### 등 마크다운 헤더를 절대 사용하지 마세요. 제목이나 강조가 필요하면 **굵은 글씨**만 사용하세요."""
+5. 답변에 #, ##, ### 등 마크다운 헤더를 절대 사용하지 마세요. 제목이나 강조가 필요하면 **굵은 글씨**만 사용하세요.
+6. 답변과 관련된 위키 페이지가 있으면 답변 끝에 반드시 마크다운 링크로 안내하세요. 형식: [페이지 제목](파일명.md) — 예: [여비관리](여비관리.md), [업무분장표](업무분장표.md)"""
 
 
 _wiki_version = 0
@@ -201,6 +203,21 @@ def log_to_sheets(question: str, answer: str):
         sheet.append_row([now, question, answer])
     except Exception:
         pass
+
+
+def show_wiki_expanders(text: str):
+    """응답에 포함된 wiki .md 링크를 expander로 인라인 표시."""
+    matches = re.findall(r'\[([^\]]+)\]\(([^)]+\.md)\)', text)
+    seen: set[str] = set()
+    for label, fname in matches:
+        fname_clean = Path(fname).name
+        if fname_clean in seen:
+            continue
+        seen.add(fname_clean)
+        wiki_path = WIKI_DIR / fname_clean
+        if wiki_path.exists():
+            with st.expander(f"📄 {label} 상세보기"):
+                st.markdown(wiki_path.read_text(encoding="utf-8"))
 
 
 def get_client():
@@ -297,6 +314,7 @@ if prompt := st.chat_input("질문을 입력하세요..."):
             response_text = st.write_stream(
                 chunk for chunk in stream.text_stream
             )
+        show_wiki_expanders(response_text)
 
     st.session_state.messages.append({"role": "assistant", "content": response_text})
     log_to_sheets(prompt, response_text)

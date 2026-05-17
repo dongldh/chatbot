@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>테트리스</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #f0f4f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+      color: #2d3748;
+    }
+
+    .game-container {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 140px;
+    }
+
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 140px;
+    }
+
+    .panel-box {
+      background: #ffffff;
+      border: 2px solid #cbd5e0;
+      border-radius: 10px;
+      padding: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .panel-box h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #718096;
+      margin-bottom: 10px;
+    }
+
+    .panel-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #e53e3e;
+    }
+
+    #board-canvas {
+      border: 3px solid #cbd5e0;
+      border-radius: 4px;
+      background: #f8fafc;
+    }
+
+    #next-canvas, #hold-canvas {
+      display: block;
+      background: #f8fafc;
+      border-radius: 6px;
+    }
+
+    .controls {
+      font-size: 11px;
+      color: #718096;
+      line-height: 1.8;
+    }
+
+    .controls span {
+      color: #4a5568;
+      font-weight: 600;
+    }
+
+    #start-btn {
+      width: 100%;
+      padding: 10px;
+      background: #f7e200;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: background 0.2s;
+    }
+
+    #start-btn:hover { background: #d4c200; }
+
+    .overlay {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(240, 244, 248, 0.90);
+      border-radius: 4px;
+      gap: 12px;
+    }
+
+    .overlay h2 {
+      font-size: 24px;
+      color: #e94560;
+    }
+
+    .overlay p {
+      font-size: 13px;
+      color: #a0aec0;
+    }
+
+    .board-wrapper {
+      position: relative;
+    }
+
+    .level-badge {
+      font-size: 28px;
+      font-weight: 700;
+      color: #38a169;
+    }
+
+    .lines-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #3182ce;
+    }
+  </style>
+</head>
+<body>
+
+<div class="game-container">
+  <!-- Left Panel -->
+  <div class="left-panel">
+    <div class="panel-box">
+      <h3>점수</h3>
+      <div class="panel-value" id="score">0</div>
+    </div>
+    <div class="panel-box">
+      <h3>레벨</h3>
+      <div class="level-badge" id="level">1</div>
+    </div>
+    <div class="panel-box">
+      <h3>라인</h3>
+      <div class="lines-value" id="lines">0</div>
+    </div>
+    <div class="panel-box">
+      <h3>홀드</h3>
+      <canvas id="hold-canvas" width="100" height="80"></canvas>
+    </div>
+  </div>
+
+  <!-- Board -->
+  <div class="board-wrapper">
+    <canvas id="board-canvas" width="300" height="600"></canvas>
+    <div class="overlay" id="overlay" style="width:300px;height:600px;top:0;left:0;">
+      <h2>테트리스</h2>
+      <p>시작 버튼을 눌러주세요</p>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="right-panel">
+    <div class="panel-box">
+      <h3>다음 블록</h3>
+      <canvas id="next-canvas" width="100" height="240"></canvas>
+    </div>
+    <div class="panel-box">
+      <button id="start-btn">시작</button>
+    </div>
+    <div class="panel-box controls">
+      <h3>조작법</h3>
+      <span>←→</span> 이동<br>
+      <span>↑</span> 회전<br>
+      <span>↓</span> 소프트 드롭<br>
+      <span>Space</span> 하드 드롭<br>
+      <span>C</span> 홀드<br>
+      <span>P</span> 일시정지
+    </div>
+  </div>
+</div>
+
+<script>
+const COLS = 10;
+const ROWS = 20;
+const BLOCK = 30;
+
+const COLORS = [
+  null,
+  '#00f5ff', // I - cyan
+  '#f7e200', // O - yellow
+  '#a000f0', // T - purple
+  '#00a800', // S - green
+  '#f00000', // Z - red
+  '#0000f0', // J - blue
+  '#f0a000', // L - orange
+];
+
+const SHAPES = [
+  [],
+  [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
+  [[2,2],[2,2]],                              // O
+  [[0,3,0],[3,3,3],[0,0,0]],                  // T
+  [[0,4,4],[4,4,0],[0,0,0]],                  // S
+  [[5,5,0],[0,5,5],[0,0,0]],                  // Z
+  [[6,0,0],[6,6,6],[0,0,0]],                  // J
+  [[0,0,7],[7,7,7],[0,0,0]],                  // L
+];
+
+const boardCanvas = document.getElementById('board-canvas');
+const ctx = boardCanvas.getContext('2d');
+const nextCanvas = document.getElementById('next-canvas');
+const nCtx = nextCanvas.getContext('2d');
+const holdCanvas = document.getElementById('hold-canvas');
+const hCtx = holdCanvas.getContext('2d');
+
+let board, piece, nextPieces, holdPiece, canHold;
+let score, level, lines;
+let gameRunning, gamePaused, animFrame, dropInterval, lastTime;
+let lockTimer = 0, lockDelay = 500, isLocking = false;
+const DAS = 167, ARR = 33;
+let dasTimer = 0, arrTimer = 0, heldDir = 0;
+let overlay;
+
+overlay = document.getElementById('overlay');
+
+function createBoard() {
+  return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+}
+
+// SRS kick tables: [fromState] -> [[dx,dy], ...]
+const SRS_KICKS = {
+  JLSTZ: [
+    [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]], // 0->1
+    [[0,0],[1,0],[1,-1],[0,2],[1,2]],      // 1->2
+    [[0,0],[1,0],[1,1],[0,-2],[1,-2]],     // 2->3
+    [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],  // 3->0
+  ],
+  I: [
+    [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],   // 0->1
+    [[0,0],[-1,0],[2,0],[-1,2],[2,-1]],   // 1->2
+    [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],   // 2->3
+    [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],   // 3->0
+  ]
+};
+
+let bag = [];
+function makePiece(id) {
+  const shape = SHAPES[id].map(r => [...r]);
+  return { id, shape, rot: 0, x: Math.floor(COLS / 2) - Math.ceil(shape[0].length / 2), y: 0 };
+}
+function nextFromBag() {
+  if (bag.length === 0) {
+    bag = [1,2,3,4,5,6,7].sort(() => Math.random() - 0.5);
+  }
+  return makePiece(bag.pop());
+}
+
+function initQueue() {
+  bag = [];
+  nextPieces = [nextFromBag(), nextFromBag(), nextFromBag()];
+}
+
+function spawnPiece() {
+  piece = nextPieces.shift();
+  nextPieces.push(nextFromBag());
+  canHold = true;
+  if (collides(piece, piece.x, piece.y)) {
+    endGame();
+  }
+}
+
+function collides(p, px, py) {
+  for (let r = 0; r < p.shape.length; r++) {
+    for (let c = 0; c < p.shape[r].length; c++) {
+      if (!p.shape[r][c]) continue;
+      const nx = px + c, ny = py + r;
+      if (nx < 0 || nx >= COLS || ny >= ROWS) return true;
+      if (ny >= 0 && board[ny][nx]) return true;
+    }
+  }
+  return false;
+}
+
+function rotate(shape, dir = 1) {
+  const rows = shape.length, cols = shape[0].length;
+  const result = Array.from({ length: cols }, () => Array(rows).fill(0));
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      if (dir === 1) result[c][rows - 1 - r] = shape[r][c];
+      else result[cols - 1 - c][r] = shape[r][c];
+  return result;
+}
+
+function tryRotate(dir = 1) {
+  const rotated = rotate(piece.shape, dir);
+  const table = piece.id === 1 ? SRS_KICKS.I : SRS_KICKS.JLSTZ;
+  const fromState = ((piece.rot % 4) + 4) % 4;
+  const kicks = table[fromState];
+  for (const [dx, dy] of kicks) {
+    const nx = piece.x + dx, ny = piece.y - dy;
+    if (!collides({ shape: rotated }, nx, ny)) {
+      piece.shape = rotated;
+      piece.x = nx;
+      piece.y = ny;
+      piece.rot = (fromState + dir + 4) % 4;
+      return true;
+    }
+  }
+  return false;
+}
+
+function lockPiece() {
+  for (let r = 0; r < piece.shape.length; r++)
+    for (let c = 0; c < piece.shape[r].length; c++)
+      if (piece.shape[r][c] && piece.y + r >= 0)
+        board[piece.y + r][piece.x + c] = piece.shape[r][c];
+  clearLines();
+  spawnPiece();
+}
+
+function clearLines() {
+  let cleared = 0;
+  for (let r = ROWS - 1; r >= 0; r--) {
+    if (board[r].every(v => v !== 0)) {
+      board.splice(r, 1);
+      board.unshift(Array(COLS).fill(0));
+      cleared++;
+      r++;
+    }
+  }
+  if (cleared > 0) {
+    const pts = [0, 100, 300, 500, 800];
+    score += (pts[cleared] || 800) * level;
+    lines += cleared;
+    level = Math.floor(lines / 10) + 1;
+    dropInterval = Math.max(100, 1000 - (level - 1) * 80);
+    updateHUD();
+  }
+}
+
+function ghostY() {
+  let gy = piece.y;
+  while (!collides(piece, piece.x, gy + 1)) gy++;
+  return gy;
+}
+
+function hold() {
+  if (!canHold) return;
+  canHold = false;
+  const reset = p => ({ ...p, x: Math.floor(COLS/2) - Math.ceil(p.shape[0].length/2), y: 0, shape: SHAPES[p.id].map(r=>[...r]) });
+  if (holdPiece) {
+    const temp = holdPiece;
+    holdPiece = reset(piece);
+    piece = reset(temp);
+    if (collides(piece, piece.x, piece.y)) endGame();
+  } else {
+    holdPiece = reset(piece);
+    spawnPiece();
+  }
+}
+
+function drawBlock(ctx, x, y, colorId, alpha = 1) {
+  const color = COLORS[colorId];
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.fillRect(x * BLOCK + 1, y * BLOCK + 1, BLOCK - 2, BLOCK - 2);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fillRect(x * BLOCK + 1, y * BLOCK + 1, BLOCK - 2, 5);
+  ctx.fillRect(x * BLOCK + 1, y * BLOCK + 1, 5, BLOCK - 2);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.fillRect(x * BLOCK + 1, y * BLOCK + BLOCK - 6, BLOCK - 2, 5);
+  ctx.fillRect(x * BLOCK + BLOCK - 6, y * BLOCK + 1, 5, BLOCK - 2);
+  ctx.globalAlpha = 1;
+}
+
+function drawGrid() {
+  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+  ctx.lineWidth = 0.5;
+  for (let r = 0; r < ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(0, r * BLOCK); ctx.lineTo(COLS * BLOCK, r * BLOCK); ctx.stroke();
+  }
+  for (let c = 0; c < COLS; c++) {
+    ctx.beginPath(); ctx.moveTo(c * BLOCK, 0); ctx.lineTo(c * BLOCK, ROWS * BLOCK); ctx.stroke();
+  }
+}
+
+function drawBoard() {
+  ctx.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
+  drawGrid();
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (board[r][c]) drawBlock(ctx, c, r, board[r][c]);
+}
+
+function drawPiece() {
+  const gy = ghostY();
+  for (let r = 0; r < piece.shape.length; r++)
+    for (let c = 0; c < piece.shape[r].length; c++)
+      if (piece.shape[r][c]) {
+        drawBlock(ctx, piece.x + c, gy + r, piece.id, 0.2);
+        drawBlock(ctx, piece.x + c, piece.y + r, piece.id);
+      }
+}
+
+function drawMini(mCtx, canvas, p, cellSize = 20) {
+  mCtx.clearRect(0, 0, canvas.width, canvas.height);
+  mCtx.fillStyle = '#f8fafc';
+  mCtx.fillRect(0, 0, canvas.width, canvas.height);
+  if (!p) return;
+  const offsetX = Math.floor((canvas.width / cellSize - p.shape[0].length) / 2);
+  const offsetY = Math.floor((canvas.height / cellSize - p.shape.length) / 2);
+  for (let r = 0; r < p.shape.length; r++)
+    for (let c = 0; c < p.shape[r].length; c++)
+      if (p.shape[r][c]) {
+        mCtx.fillStyle = COLORS[p.shape[r][c]];
+        mCtx.fillRect((offsetX + c) * cellSize + 1, (offsetY + r) * cellSize + 1, cellSize - 2, cellSize - 2);
+        mCtx.fillStyle = 'rgba(255,255,255,0.25)';
+        mCtx.fillRect((offsetX + c) * cellSize + 1, (offsetY + r) * cellSize + 1, cellSize - 2, 4);
+      }
+}
+
+function drawNext() {
+  nCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+  nCtx.fillStyle = '#f8fafc';
+  nCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+  const cellSize = 20;
+  const slotH = nextCanvas.height / 3;
+  nextPieces.forEach((p, i) => {
+    const offsetX = Math.floor((nextCanvas.width / cellSize - p.shape[0].length) / 2);
+    const baseY = i * slotH / cellSize + Math.floor((slotH / cellSize - p.shape.length) / 2);
+    for (let r = 0; r < p.shape.length; r++)
+      for (let c = 0; c < p.shape[r].length; c++)
+        if (p.shape[r][c]) {
+          nCtx.fillStyle = COLORS[p.shape[r][c]];
+          nCtx.fillRect((offsetX + c) * cellSize + 1, (baseY + r) * cellSize + 1, cellSize - 2, cellSize - 2);
+          nCtx.fillStyle = 'rgba(255,255,255,0.25)';
+          nCtx.fillRect((offsetX + c) * cellSize + 1, (baseY + r) * cellSize + 1, cellSize - 2, 4);
+        }
+    if (i < 2) {
+      nCtx.strokeStyle = 'rgba(255,255,255,0.05)';
+      nCtx.beginPath();
+      nCtx.moveTo(4, (i + 1) * slotH);
+      nCtx.lineTo(nextCanvas.width - 4, (i + 1) * slotH);
+      nCtx.stroke();
+    }
+  });
+}
+
+function updateHUD() {
+  document.getElementById('score').textContent = score.toLocaleString();
+  document.getElementById('level').textContent = level;
+  document.getElementById('lines').textContent = lines;
+}
+
+let dropCounter = 0;
+
+function resetLock() {
+  lockTimer = 0;
+  isLocking = false;
+}
+
+function moveH(dir) {
+  if (!collides(piece, piece.x + dir, piece.y)) { piece.x += dir; resetLock(); }
+}
+
+function gameLoop(time = 0) {
+  const delta = time - lastTime;
+  lastTime = time;
+  if (!gamePaused) {
+    // DAS/ARR
+    if (heldDir !== 0) {
+      dasTimer += delta;
+      if (dasTimer >= DAS) {
+        arrTimer += delta;
+        while (arrTimer >= ARR) { moveH(heldDir); arrTimer -= ARR; }
+      }
+    }
+    dropCounter += delta;
+    if (dropCounter >= dropInterval) {
+      dropCounter = 0;
+      if (!collides(piece, piece.x, piece.y + 1)) {
+        piece.y++;
+        resetLock();
+      } else {
+        isLocking = true;
+      }
+    }
+    if (isLocking) {
+      lockTimer += delta;
+      if (lockTimer >= lockDelay) {
+        if (collides(piece, piece.x, piece.y + 1)) {
+          lockPiece();
+        }
+        resetLock();
+      }
+    }
+    drawBoard();
+    drawPiece();
+    drawNext();
+    drawMini(hCtx, holdCanvas, holdPiece);
+  }
+  animFrame = requestAnimationFrame(gameLoop);
+}
+
+function startGame() {
+  board = createBoard();
+  score = 0; level = 1; lines = 0;
+  dropInterval = 1000;
+  dropCounter = 0;
+  lastTime = 0;
+  lockTimer = 0; isLocking = false;
+  holdPiece = null;
+  canHold = true;
+  gamePaused = false;
+  gameRunning = true;
+  initQueue();
+  spawnPiece();
+  updateHUD();
+  overlay.style.display = 'none';
+  if (animFrame) cancelAnimationFrame(animFrame);
+  animFrame = requestAnimationFrame(gameLoop);
+  document.getElementById('start-btn').textContent = '재시작';
+}
+
+function endGame() {
+  gameRunning = false;
+  cancelAnimationFrame(animFrame);
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `
+    <h2>게임 오버</h2>
+    <p>점수: ${score.toLocaleString()}</p>
+    <p>레벨: ${level} | 라인: ${lines}</p>
+    <p style="margin-top:8px;color:#718096">시작 버튼으로 재시작</p>
+  `;
+  document.getElementById('start-btn').textContent = '재시작';
+}
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+
+document.addEventListener('keydown', e => {
+  if (!gameRunning) return;
+  switch (e.code) {
+    case 'ArrowLeft':
+      e.preventDefault();
+      if (!collides(piece, piece.x - 1, piece.y)) { piece.x--; resetLock(); }
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      if (!collides(piece, piece.x + 1, piece.y)) { piece.x++; resetLock(); }
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      if (!collides(piece, piece.x, piece.y + 1)) { piece.y++; score += 1; resetLock(); }
+      else lockPiece();
+      dropCounter = 0;
+      updateHUD();
+      break;
+    case 'ArrowUp':
+    case 'KeyX':
+      e.preventDefault();
+      tryRotate(1); resetLock();
+      break;
+    case 'KeyZ':
+      e.preventDefault();
+      tryRotate(-1); resetLock();
+      break;
+    case 'Space':
+      e.preventDefault();
+      const gy = ghostY();
+      score += (gy - piece.y) * 2;
+      piece.y = gy;
+      lockPiece();
+      updateHUD();
+      break;
+    case 'KeyC':
+      hold();
+      break;
+    case 'KeyP':
+      gamePaused = !gamePaused;
+      if (gamePaused) {
+        overlay.style.display = 'flex';
+        overlay.innerHTML = '<h2>일시정지</h2><p>P 키로 재개</p>';
+      } else {
+        overlay.style.display = 'none';
+        lastTime = performance.now();
+      }
+      break;
+  }
+});
+
+// Touch support
+let touchStartX, touchStartY;
+boardCanvas.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  e.preventDefault();
+}, { passive: false });
+
+boardCanvas.addEventListener('touchend', e => {
+  if (!gameRunning) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx > 20 && !collides(piece, piece.x + 1, piece.y)) piece.x++;
+    else if (dx < -20 && !collides(piece, piece.x - 1, piece.y)) piece.x--;
+  } else {
+    if (dy > 20) {
+      const gy = ghostY(); piece.y = gy; lockPiece();
+    } else if (dy < -20) {
+      tryRotate();
+    }
+  }
+  e.preventDefault();
+}, { passive: false });
+</script>
+</body>
+</html>
