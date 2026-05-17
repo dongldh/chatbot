@@ -1,0 +1,209 @@
+#uu-helper {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 2147483647 !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+#uu-toggle {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 50% !important;
+  background: #00A86B !important;
+  border: none !important;
+  cursor: pointer !important;
+  font-size: 22px !important;
+  box-shadow: 0 4px 20px rgba(0,168,107,0.4) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 0.2s !important;
+  position: relative !important;
+}
+
+#uu-toggle:hover {
+  transform: scale(1.08) !important;
+}
+
+#uu-badge {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 11px !important;
+  height: 11px !important;
+  background: #FF6B35 !important;
+  border-radius: 50% !important;
+  border: 2px solid #fff !important;
+  display: none !important;
+}
+
+#uu-badge.show { display: block !important; }
+
+#uu-panel {
+  position: absolute !important;
+  bottom: 64px !important;
+  right: 0 !important;
+  width: 360px !important;
+  height: 500px !important;
+  background: #fff !important;
+  border-radius: 20px !important;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.16) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  transform: translateY(12px) scale(0.96) !important;
+  pointer-events: none !important;
+  transition: opacity 0.22s, transform 0.22s !important;
+}
+
+#uu-helper.uu-open #uu-panel {
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) !important;
+  pointer-events: all !important;
+}
+
+#uu-header {
+  background: #00A86B !important;
+  padding: 14px 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-shrink: 0 !important;
+}
+
+#uu-title {
+  color: #fff !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  margin: 0 !important;
+}
+
+#uu-close {
+  background: transparent !important;
+  border: none !important;
+  color: rgba(255,255,255,0.8) !important;
+  cursor: pointer !important;
+  font-size: 17px !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+#uu-context-bar {
+  background: #E8F8F2 !important;
+  padding: 6px 14px !important;
+  font-size: 11px !important;
+  color: #2E7D52 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  flex-shrink: 0 !important;
+  min-height: 26px !important;
+}
+
+#uu-messages {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 12px 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  background: #F5F7F5 !important;
+}
+
+.uu-msg {
+  max-width: 90% !important;
+  padding: 9px 13px !important;
+  border-radius: 16px !important;
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  margin: 0 !important;
+}
+
+.uu-msg-user {
+  background: #00A86B !important;
+  color: #fff !important;
+  align-self: flex-end !important;
+  border-bottom-right-radius: 4px !important;
+}
+
+.uu-msg-assistant {
+  background: #fff !important;
+  color: #191F28 !important;
+  align-self: flex-start !important;
+  border-bottom-left-radius: 4px !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07) !important;
+}
+
+.uu-msg-system {
+  background: transparent !important;
+  color: #8B95A1 !important;
+  font-size: 11px !important;
+  align-self: center !important;
+  text-align: center !important;
+}
+
+.uu-streaming::after {
+  content: ' ●' !important;
+  animation: uu-blink 0.9s infinite !important;
+  color: #00A86B !important;
+}
+
+@keyframes uu-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+#uu-input-row {
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 8px !important;
+  padding: 10px 12px !important;
+  border-top: 1px solid #EEF2EE !important;
+  background: #fff !important;
+  flex-shrink: 0 !important;
+}
+
+#uu-input {
+  flex: 1 !important;
+  border: 1.5px solid #E4EDE8 !important;
+  border-radius: 12px !important;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  font-family: inherit !important;
+  resize: none !important;
+  outline: none !important;
+  max-height: 80px !important;
+  background: #F5F7F5 !important;
+  color: #191F28 !important;
+  box-sizing: border-box !important;
+  line-height: 1.4 !important;
+}
+
+#uu-input:focus {
+  border-color: #00A86B !important;
+  background: #fff !important;
+}
+
+#uu-send {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 10px !important;
+  background: #00A86B !important;
+  border: none !important;
+  color: #fff !important;
+  font-size: 16px !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#uu-send:disabled {
+  background: #ccc !important;
+  cursor: not-allowed !important;
+}

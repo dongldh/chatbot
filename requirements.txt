@@ -5,3 +5,7 @@ pytz>=2023.3
 gspread>=6.0
 google-auth>=2.0
 pandas>=2.0
+
+# api_server.py (크롬 확장 Phase 2 내부 서버용)
+fastapi>=0.110
+uvicorn>=0.29
